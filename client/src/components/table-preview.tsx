@@ -155,11 +155,15 @@ export function TablePreview({ tableData, styles }: TablePreviewProps) {
         )}
       </CardContent>
 
-      <style jsx>{`
-        .hover-enabled tbody tr:hover {
-          background-color: ${styles.backgroundColor}bb !important;
-        }
-      `}</style>
+      {styles.hoverEffects && (
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .hover-enabled tbody tr:hover {
+              background-color: ${styles.backgroundColor}bb !important;
+            }
+          `
+        }} />
+      )}
     </Card>
   );
 }
