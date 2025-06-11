@@ -6,6 +6,7 @@ import { StyleControls } from '@/components/style-controls';
 import { TablePreview } from '@/components/table-preview';
 import { ExportPanel } from '@/components/export-panel';
 import { SaveLoadPanel } from '@/components/save-load-panel';
+import { LoadGallery } from '@/components/load-gallery';
 import { parseMarkdownTable, generateSampleMarkdown } from '@/lib/markdown-parser';
 import { DEFAULT_STYLES } from '@/types/table-styles';
 import type { TableStyles, TableData } from '@/types/table-styles';
@@ -29,6 +30,15 @@ export default function Home() {
   useEffect(() => {
     setMarkdownInput(generateSampleMarkdown());
   }, []);
+
+  const handleLoadTable = (markdown: string, styles: TableStyles) => {
+    setMarkdownInput(markdown);
+    setTableStyles(styles);
+  };
+
+  const handleLoadTheme = (styles: TableStyles) => {
+    setTableStyles(styles);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -74,6 +84,10 @@ export default function Home() {
               tableData={tableData}
               styles={tableStyles}
               markdownInput={markdownInput}
+            />
+            <LoadGallery 
+              onLoadTable={handleLoadTable}
+              onLoadTheme={handleLoadTheme}
             />
           </div>
 
