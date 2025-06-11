@@ -12,6 +12,109 @@ export interface StyleSuggestion {
   category: 'professional' | 'casual' | 'technical' | 'creative';
 }
 
+// Fallback suggestions when OpenAI API is unavailable
+const getFallbackSuggestions = (tableData: TableData): StyleSuggestion[] => {
+  const hasNumbers = tableData.rows.some(row => 
+    row.some(cell => !isNaN(Number(cell)) && cell.trim() !== '')
+  );
+  
+  const hasHeaders = tableData.headers.length > 0;
+  const rowCount = tableData.rows.length;
+  
+  const suggestions: StyleSuggestion[] = [
+    {
+      name: "Professional Report",
+      description: "Clean, business-ready styling with subtle borders and professional typography",
+      reasoning: "Ideal for business reports and presentations with clear data hierarchy",
+      category: "professional",
+      styles: {
+        fontFamily: "Inter",
+        fontSize: 14,
+        textColor: "#1F2937",
+        backgroundColor: "#FFFFFF",
+        headerColor: "#F8FAFC",
+        borderColor: "#E2E8F0",
+        borderStyle: "solid",
+        borderWidth: 1,
+        cellPadding: 12,
+        textAlignment: hasNumbers ? "right" : "left",
+        stripedRows: rowCount > 5,
+        hoverEffects: true,
+        headerStyling: true,
+        roundedCorners: false
+      }
+    },
+    {
+      name: "Modern Minimal",
+      description: "Clean design with no borders and ample spacing for a contemporary look",
+      reasoning: "Perfect for modern dashboards and clean data presentations",
+      category: "casual",
+      styles: {
+        fontFamily: "Inter",
+        fontSize: 15,
+        textColor: "#374151",
+        backgroundColor: "#FFFFFF",
+        headerColor: "#F9FAFB",
+        borderColor: "#FFFFFF",
+        borderStyle: "none",
+        borderWidth: 0,
+        cellPadding: 16,
+        textAlignment: "left",
+        stripedRows: false,
+        hoverEffects: true,
+        headerStyling: true,
+        roundedCorners: true
+      }
+    },
+    {
+      name: "Data Dashboard",
+      description: "Optimized for numerical data with right alignment and clear visual separation",
+      reasoning: hasNumbers ? "Right-aligned for easy number comparison" : "Clean layout for data visualization",
+      category: "technical",
+      styles: {
+        fontFamily: "Inter",
+        fontSize: 13,
+        textColor: "#111827",
+        backgroundColor: "#FFFFFF",
+        headerColor: "#EFF6FF",
+        borderColor: "#D1D5DB",
+        borderStyle: "solid",
+        borderWidth: 1,
+        cellPadding: 10,
+        textAlignment: hasNumbers ? "right" : "center",
+        stripedRows: true,
+        hoverEffects: true,
+        headerStyling: true,
+        roundedCorners: false
+      }
+    },
+    {
+      name: "Creative Accent",
+      description: "Vibrant styling with colored headers and rounded corners for visual appeal",
+      reasoning: "Eye-catching design for presentations and creative content",
+      category: "creative",
+      styles: {
+        fontFamily: "Inter",
+        fontSize: 14,
+        textColor: "#1F2937",
+        backgroundColor: "#FFFFFF",
+        headerColor: "#EBF4FF",
+        borderColor: "#3B82F6",
+        borderStyle: "solid",
+        borderWidth: 2,
+        cellPadding: 14,
+        textAlignment: "left",
+        stripedRows: false,
+        hoverEffects: true,
+        headerStyling: true,
+        roundedCorners: true
+      }
+    }
+  ];
+  
+  return suggestions;
+};
+
 export async function generateTableStyleSuggestions(
   tableData: TableData,
   markdownContent: string
@@ -81,9 +184,80 @@ Respond with JSON in this exact format:
     return result.suggestions || [];
   } catch (error) {
     console.error('Error generating style suggestions:', error);
-    throw new Error('Failed to generate AI style suggestions');
+    console.log('Using fallback suggestions due to API unavailability');
+    return getFallbackSuggestions(tableData);
   }
 }
+
+// Fallback analysis when OpenAI API is unavailable
+const getFallbackAnalysis = (tableData: TableData): {
+  dataTypes: string[];
+  purpose: string;
+  recommendations: string[];
+} => {
+  const dataTypes: string[] = [];
+  const recommendations: string[] = [];
+  
+  // Analyze data types
+  const sampleCells = tableData.rows.flat().slice(0, 20);
+  
+  let hasNumbers = false;
+  let hasDates = false;
+  let hasPercentages = false;
+  let hasText = false;
+  
+  sampleCells.forEach(cell => {
+    const trimmed = cell.trim();
+    if (!trimmed) return;
+    
+    if (!isNaN(Number(trimmed))) {
+      hasNumbers = true;
+    } else if (trimmed.includes('%')) {
+      hasPercentages = true;
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$|^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      hasDates = true;
+    } else {
+      hasText = true;
+    }
+  });
+  
+  if (hasNumbers) dataTypes.push('numeric');
+  if (hasText) dataTypes.push('text');
+  if (hasDates) dataTypes.push('date');
+  if (hasPercentages) dataTypes.push('percentage');
+  
+  // Generate purpose based on headers and content
+  const headers = tableData.headers.map(h => h.toLowerCase());
+  let purpose = 'Data table';
+  
+  if (headers.some(h => h.includes('sales') || h.includes('revenue') || h.includes('profit'))) {
+    purpose = 'Financial/sales data table';
+  } else if (headers.some(h => h.includes('user') || h.includes('customer') || h.includes('member'))) {
+    purpose = 'User/customer data table';
+  } else if (headers.some(h => h.includes('product') || h.includes('item') || h.includes('inventory'))) {
+    purpose = 'Product/inventory table';
+  } else if (hasNumbers && hasPercentages) {
+    purpose = 'Performance metrics table';
+  }
+  
+  // Generate recommendations
+  if (hasNumbers) {
+    recommendations.push('Right-align numeric columns for better readability');
+  }
+  if (tableData.rows.length > 5) {
+    recommendations.push('Consider alternating row colors for easier scanning');
+  }
+  if (hasPercentages || hasNumbers) {
+    recommendations.push('Use professional styling for data-focused presentation');
+  }
+  recommendations.push('Ensure adequate padding for comfortable reading');
+  
+  return {
+    dataTypes,
+    purpose,
+    recommendations
+  };
+};
 
 export async function analyzeTableContent(tableData: TableData): Promise<{
   dataTypes: string[];
@@ -128,6 +302,7 @@ Analyze and respond with JSON:
     };
   } catch (error) {
     console.error('Error analyzing table content:', error);
-    throw new Error('Failed to analyze table content');
+    console.log('Using fallback analysis due to API unavailability');
+    return getFallbackAnalysis(tableData);
   }
 }

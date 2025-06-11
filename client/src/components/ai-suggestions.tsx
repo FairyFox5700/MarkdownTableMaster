@@ -46,6 +46,7 @@ export function AISuggestions({
   const [analysis, setAnalysis] = useState<TableAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   const generateSuggestions = async () => {
     if (!tableData || !markdownInput.trim()) {
@@ -74,6 +75,7 @@ export function AISuggestions({
 
       const data = await response.json();
       setSuggestions(data.suggestions || []);
+      setUsingFallback(false);
       
       toast({
         title: "AI Suggestions Ready",
