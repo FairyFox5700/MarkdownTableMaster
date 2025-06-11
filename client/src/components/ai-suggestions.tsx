@@ -282,6 +282,21 @@ export function AISuggestions({
           <div className="text-center py-8 text-muted-foreground">
             <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">Click "Get Suggestions" to let AI analyze your table and recommend optimal styling</p>
+            <p className="text-xs mt-2 opacity-75">Smart fallback suggestions available if AI is unavailable</p>
+          </div>
+        )}
+
+        {suggestions.length > 0 && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-800">
+                Intelligent styling suggestions generated
+              </span>
+            </div>
+            <p className="text-xs text-blue-600 mt-1">
+              These suggestions are tailored to your table's content and data types
+            </p>
           </div>
         )}
       </CardContent>
