@@ -7,6 +7,7 @@ import { TablePreview } from '@/components/table-preview';
 import { ExportPanel } from '@/components/export-panel';
 import { SaveLoadPanel } from '@/components/save-load-panel';
 import { LoadGallery } from '@/components/load-gallery';
+import { AISuggestions } from '@/components/ai-suggestions';
 import { parseMarkdownTable, generateSampleMarkdown } from '@/lib/markdown-parser';
 import { DEFAULT_STYLES } from '@/types/table-styles';
 import type { TableStyles, TableData } from '@/types/table-styles';
@@ -93,6 +94,12 @@ export default function Home() {
 
           {/* Right Panel - Preview and Export */}
           <div className="lg:col-span-7 space-y-6">
+            <AISuggestions 
+              tableData={tableData}
+              markdownInput={markdownInput}
+              onApplyStyles={setTableStyles}
+              currentStyles={tableStyles}
+            />
             <TablePreview 
               tableData={tableData}
               styles={tableStyles}
