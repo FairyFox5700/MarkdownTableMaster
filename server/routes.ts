@@ -168,15 +168,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve static files in production or setup Vite in development
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const server = createServer(app);
-    await setupVite(app, server);
-    return server;
-  }
-
   const server = createServer(app);
   return server;
 }

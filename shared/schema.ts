@@ -10,7 +10,7 @@ export const users = pgTable("users", {
 
 export const savedTables = pgTable("saved_tables", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
+  userId: integer("user_id"),
   name: text("name").notNull(),
   markdownContent: text("markdown_content").notNull(),
   styles: json("styles").notNull(),
@@ -21,7 +21,7 @@ export const savedTables = pgTable("saved_tables", {
 
 export const customThemes = pgTable("custom_themes", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
+  userId: integer("user_id"),
   name: text("name").notNull(),
   styles: json("styles").notNull(),
   isPublic: boolean("is_public").default(false),
