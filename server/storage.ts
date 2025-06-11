@@ -116,7 +116,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(customThemes)
       .where(and(eq(customThemes.id, id), eq(customThemes.userId, userId)));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

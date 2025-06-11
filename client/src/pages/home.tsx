@@ -5,6 +5,7 @@ import { MarkdownInput } from '@/components/markdown-input';
 import { StyleControls } from '@/components/style-controls';
 import { TablePreview } from '@/components/table-preview';
 import { ExportPanel } from '@/components/export-panel';
+import { SaveLoadPanel } from '@/components/save-load-panel';
 import { parseMarkdownTable, generateSampleMarkdown } from '@/lib/markdown-parser';
 import { DEFAULT_STYLES } from '@/types/table-styles';
 import type { TableStyles, TableData } from '@/types/table-styles';
@@ -68,6 +69,11 @@ export default function Home() {
             <StyleControls 
               styles={tableStyles}
               onStyleChange={setTableStyles}
+            />
+            <SaveLoadPanel 
+              tableData={tableData}
+              styles={tableStyles}
+              markdownInput={markdownInput}
             />
           </div>
 
