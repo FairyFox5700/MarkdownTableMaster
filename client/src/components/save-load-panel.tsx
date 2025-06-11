@@ -35,8 +35,8 @@ export function SaveLoadPanel({
   const [saveThemeName, setSaveThemeName] = useState('');
   const [isPublic, setIsPublic] = useState(false);
 
-  // For demo purposes, using userId 1. In a real app, this would come from auth
-  const userId = 1;
+  // Anonymous saves - userId is null for demo purposes
+  const userId = null;
 
   const handleSaveTable = async () => {
     if (!saveTableName.trim()) {
