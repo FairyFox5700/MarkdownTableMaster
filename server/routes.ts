@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { insertSavedTableSchema, insertCustomThemeSchema } from "@shared/schema";
-import { generateTableStyleSuggestions, analyzeTableContent } from "./ai-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
@@ -169,38 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI Suggestions endpoints
-  app.post("/api/ai/style-suggestions", async (req, res) => {
-    try {
-      const { tableData, markdownContent } = req.body;
-      
-      if (!tableData || !markdownContent) {
-        return res.status(400).json({ error: "tableData and markdownContent are required" });
-      }
-
-      const suggestions = await generateTableStyleSuggestions(tableData, markdownContent);
-      res.json({ suggestions });
-    } catch (error) {
-      log(`Error generating AI suggestions: ${error}`, "api");
-      res.status(500).json({ error: "Failed to generate style suggestions" });
-    }
-  });
-
-  app.post("/api/ai/analyze-table", async (req, res) => {
-    try {
-      const { tableData } = req.body;
-      
-      if (!tableData) {
-        return res.status(400).json({ error: "tableData is required" });
-      }
-
-      const analysis = await analyzeTableContent(tableData);
-      res.json(analysis);
-    } catch (error) {
-      log(`Error analyzing table: ${error}`, "api");
-      res.status(500).json({ error: "Failed to analyze table content" });
-    }
-  });
+  // AI Suggestions endpoints have been removed
 
   const server = createServer(app);
   return server;

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Image, 
@@ -10,37 +11,38 @@ import {
   Code, 
   FileSpreadsheet, 
   Download,
-  Heart,
-  Plus,
-  PlusSquare,
-  ArrowUpDown,
-  Minimize2,
-  RotateCcw
+  Maximize2
 } from 'lucide-react';
-import type { TableData, ExportSettings } from '@/types/table-styles';
+import type { TableData, ExportSettings, TableStyles } from '@/types/table-styles';
+import { DEFAULT_STYLES } from '@/types/table-styles';
 import { 
   exportTableAsPNG, 
   copyTableAsImage, 
   exportTableAsHTML, 
-  exportTableAsCSV,
-  generateEmbedCode 
+  exportTableAsCSV
 } from '@/lib/table-exporter';
 import { useState } from 'react';
 
 interface ExportPanelProps {
   tableData: TableData | null;
+  styles?: TableStyles;
 }
 
-export function ExportPanel({ tableData }: ExportPanelProps) {
+export function ExportPanel({ tableData, styles }: ExportPanelProps) {
   const { toast } = useToast();
   const [exportSettings, setExportSettings] = useState<ExportSettings>({
     quality: 'high',
     background: 'white',
   });
   const [isExporting, setIsExporting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleExport = async (type: string) => {
-    const tableElement = document.getElementById('table-preview')?.querySelector('table');
+  const handleExport = async (type: string, fromDialog: boolean = false) => {
+    // Get table element from either the dialog (expanded) or the preview
+    const tableElement = fromDialog 
+      ? document.getElementById('expanded-table-preview')?.querySelector('table') 
+      : document.getElementById('table-preview')?.querySelector('table');
+    
     if (!tableElement) {
       toast({
         title: "Error",
@@ -84,13 +86,6 @@ export function ExportPanel({ tableData }: ExportPanelProps) {
             });
           }
           break;
-        case 'embed':
-          generateEmbedCode(tableElement);
-          toast({
-            title: "Success",
-            description: "Embed code generated and copied!",
-          });
-          break;
         default:
           toast({
             title: "Info",
@@ -108,12 +103,7 @@ export function ExportPanel({ tableData }: ExportPanelProps) {
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    toast({
-      title: "Info",
-      description: `${action} feature coming soon!`,
-    });
-  };
+
 
   return (
     <div className="space-y-6">
@@ -132,6 +122,15 @@ export function ExportPanel({ tableData }: ExportPanelProps) {
             >
               <Image className="w-4 h-4 mr-2 text-muted-foreground" />
               Download PNG
+            </Button>
+            <Button
+              onClick={() => setIsDialogOpen(true)}
+              disabled={isExporting}
+              className="justify-start h-auto p-4"
+              variant="outline"
+            >
+              <Maximize2 className="w-4 h-4 mr-2 text-muted-foreground" />
+              Expanded Export
             </Button>
             <Button
               onClick={() => handleExport('copy-image')}
@@ -159,24 +158,6 @@ export function ExportPanel({ tableData }: ExportPanelProps) {
             >
               <FileSpreadsheet className="w-4 h-4 mr-2 text-muted-foreground" />
               Export CSV
-            </Button>
-            <Button
-              onClick={() => handleExport('excel')}
-              disabled={isExporting}
-              className="justify-start h-auto p-4"
-              variant="outline"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-2 text-muted-foreground" />
-              Export Excel
-            </Button>
-            <Button
-              onClick={() => handleExport('embed')}
-              disabled={isExporting}
-              className="justify-start h-auto p-4"
-              variant="outline"
-            >
-              <Code className="w-4 h-4 mr-2 text-muted-foreground" />
-              Embed Code
             </Button>
           </div>
 
@@ -221,60 +202,11 @@ export function ExportPanel({ tableData }: ExportPanelProps) {
         </CardContent>
       </Card>
 
-      {/* Quick Actions */}
-      <Card className="shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg font-medium">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction('Add Row')}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Row
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction('Add Column')}
-            >
-              <PlusSquare className="w-4 h-4 mr-2" />
-              Add Column
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction('Sort Table')}
-            >
-              <ArrowUpDown className="w-4 h-4 mr-2" />
-              Sort Table
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction('Merge Cells')}
-            >
-              <Minimize2 className="w-4 h-4 mr-2" />
-              Merge Cells
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction('Reset Styles')}
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Reset Styles
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Floating Action Buttons */}
       <div className="fixed bottom-6 right-6 z-50">
-        <div className="flex flex-col space-y-3">
+        <div className="flex flex-col">
           <Button
             size="lg"
             onClick={() => handleExport('png')}
@@ -284,17 +216,152 @@ export function ExportPanel({ tableData }: ExportPanelProps) {
           >
             <Download className="w-5 h-5" />
           </Button>
-          <Button
-            size="lg"
-            variant="secondary"
-            onClick={() => handleQuickAction('Save Theme')}
-            className="rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
-            title="Save Current Theme"
-          >
-            <Heart className="w-5 h-5" />
-          </Button>
         </div>
       </div>
+
+      {/* Expanded Table Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Expanded Table Export</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="bg-white rounded-md p-4 mb-4" id="expanded-table-preview">
+              {tableData && styles && (
+                <table 
+                  style={{
+                    fontFamily: styles.fontFamily,
+                    fontSize: `${styles.fontSize}px`,
+                    color: styles.textColor,
+                    backgroundColor: styles.backgroundColor,
+                    borderColor: styles.borderColor,
+                    borderStyle: styles.borderStyle,
+                    borderWidth: styles.borderStyle === 'none' ? 0 : `${styles.borderWidth}px`,
+                    borderCollapse: 'separate',
+                    borderSpacing: 0,
+                    width: '100%',
+                    ...(styles.roundedCorners && { 
+                      borderRadius: '8px',
+                      overflow: 'hidden'
+                    }),
+                  }}
+                  className={styles.hoverEffects ? 'hover-expanded-enabled' : ''}
+                >
+                  <thead>
+                    <tr>
+                      {tableData.headers.map((header, index) => {
+                        // Calculate header cell styles with proper rounded corners
+                        const isFirstCell = index === 0;
+                        const isLastCell = index === tableData.headers.length - 1;
+                        const isFirstRow = true;
+                        const isLastRow = tableData.rows.length === 0;
+                        
+                        return (
+                          <th key={index} style={{
+                            padding: `${styles.cellPadding}px`,
+                            textAlign: styles.textAlignment as "left" | "center" | "right",
+                            borderColor: styles.borderColor,
+                            borderStyle: styles.borderStyle,
+                            borderWidth: styles.borderStyle === 'none' ? 0 : `${styles.borderWidth}px`,
+                            backgroundColor: styles.headerStyling ? styles.headerColor : 'inherit',
+                            fontWeight: styles.headerStyling ? 600 : 'normal',
+                            textTransform: styles.headerStyling ? 'uppercase' : 'none',
+                            fontSize: styles.headerStyling ? '0.75rem' : 'inherit',
+                            letterSpacing: styles.headerStyling ? '0.05em' : 'normal',
+                            ...(styles.roundedCorners && isFirstRow && isFirstCell ? { borderTopLeftRadius: '8px' } : {}),
+                            ...(styles.roundedCorners && isFirstRow && isLastCell ? { borderTopRightRadius: '8px' } : {}),
+                            ...(styles.roundedCorners && isLastRow && isFirstCell ? { borderBottomLeftRadius: '8px' } : {}),
+                            ...(styles.roundedCorners && isLastRow && isLastCell ? { borderBottomRightRadius: '8px' } : {})
+                          }}>
+                            {header}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableData.rows.map((row, rowIndex) => {
+                      const isLastRow = rowIndex === tableData.rows.length - 1;
+                      
+                      return (
+                        <tr key={rowIndex} style={{
+                          backgroundColor: styles.stripedRows && rowIndex % 2 === 1 ? 
+                            `${styles.backgroundColor}dd` : 'inherit',
+                          ...(styles.hoverEffects && {
+                            transition: 'background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease',
+                          })
+                        }}>
+                          {row.map((cell, cellIndex) => {
+                            const isFirstCell = cellIndex === 0;
+                            const isLastCell = cellIndex === row.length - 1;
+                            
+                            return (
+                              <td key={cellIndex} style={{
+                                padding: `${styles.cellPadding}px`,
+                                textAlign: styles.textAlignment as "left" | "center" | "right",
+                                borderColor: styles.borderColor,
+                                borderStyle: styles.borderStyle,
+                                borderWidth: styles.borderStyle === 'none' ? 0 : `${styles.borderWidth}px`,
+                                ...(styles.roundedCorners && isLastRow && isFirstCell ? { borderBottomLeftRadius: '8px' } : {}),
+                                ...(styles.roundedCorners && isLastRow && isLastCell ? { borderBottomRightRadius: '8px' } : {})
+                              }}>
+                                {cell}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  handleExport('png', true);
+                  setIsDialogOpen(false);
+                }}
+                disabled={isExporting}
+              >
+                Download PNG
+              </Button>
+              <Button
+                onClick={() => {
+                  handleExport('copy-image', true);
+                  setIsDialogOpen(false);
+                }}
+                disabled={isExporting}
+                variant="secondary"
+              >
+                Copy as Image
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hover effects styling for expanded table */}
+      {styles?.hoverEffects && (
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .hover-expanded-enabled tbody tr:hover {
+              background-color: ${styles.backgroundColor}bb !important;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+              transform: translateY(-1px);
+            }
+            .hover-expanded-enabled tbody tr {
+              transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            }
+          `
+        }} />
+      )}
     </div>
   );
 }

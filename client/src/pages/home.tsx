@@ -1,13 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Table, HelpCircle, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownInput } from '@/components/markdown-input';
 import { StyleControls } from '@/components/style-controls';
 import { TablePreview } from '@/components/table-preview';
 import { ExportPanel } from '@/components/export-panel';
-import { SaveLoadPanel } from '@/components/save-load-panel';
-import { LoadGallery } from '@/components/load-gallery';
-import { AISuggestions } from '@/components/ai-suggestions';
 import { parseMarkdownTable, generateSampleMarkdown } from '@/lib/markdown-parser';
 import { DEFAULT_STYLES } from '@/types/table-styles';
 import type { TableStyles, TableData } from '@/types/table-styles';
@@ -32,14 +29,74 @@ export default function Home() {
     setMarkdownInput(generateSampleMarkdown());
   }, []);
 
-  const handleLoadTable = (markdown: string, styles: TableStyles) => {
-    setMarkdownInput(markdown);
-    setTableStyles(styles);
+  // Function to move a row from one index to another
+  const moveRow = useCallback((dragIndex: number, hoverIndex: number) => {
+    if (!tableData) return;
+    
+    const newRows = [...tableData.rows];
+    const draggedRow = newRows[dragIndex];
+    
+    // Remove the row from the old position
+    newRows.splice(dragIndex, 1);
+    // Insert the row at the new position
+    newRows.splice(hoverIndex, 0, draggedRow);
+    
+    // Update the table data
+    setTableData({
+      ...tableData,
+      rows: newRows
+    });
+    
+    // Update the markdown input to reflect the change
+    updateMarkdownFromTableData({
+      ...tableData,
+      rows: newRows
+    });
+  }, [tableData]);
+
+  // Function to move a column from one index to another
+  const moveColumn = useCallback((dragIndex: number, hoverIndex: number) => {
+    if (!tableData) return;
+    
+    // Create new headers by moving the dragged header
+    const newHeaders = [...tableData.headers];
+    const draggedHeader = newHeaders[dragIndex];
+    newHeaders.splice(dragIndex, 1);
+    newHeaders.splice(hoverIndex, 0, draggedHeader);
+    
+    // Create new rows with columns reordered
+    const newRows = tableData.rows.map(row => {
+      const newRow = [...row];
+      const draggedCell = newRow[dragIndex];
+      newRow.splice(dragIndex, 1);
+      newRow.splice(hoverIndex, 0, draggedCell);
+      return newRow;
+    });
+    
+    // Update the table data
+    setTableData({
+      headers: newHeaders,
+      rows: newRows
+    });
+    
+    // Update the markdown input to reflect the change
+    updateMarkdownFromTableData({
+      headers: newHeaders,
+      rows: newRows
+    });
+  }, [tableData]);
+
+  // Function to update markdown input based on table data
+  const updateMarkdownFromTableData = (data: TableData) => {
+    const headerLine = `| ${data.headers.join(' | ')} |`;
+    const separatorLine = `| ${data.headers.map(() => '------').join(' | ')} |`;
+    const rowLines = data.rows.map(row => `| ${row.join(' | ')} |`);
+    
+    const newMarkdown = [headerLine, separatorLine, ...rowLines].join('\n');
+    setMarkdownInput(newMarkdown);
   };
 
-  const handleLoadTheme = (styles: TableStyles) => {
-    setTableStyles(styles);
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -81,28 +138,15 @@ export default function Home() {
               styles={tableStyles}
               onStyleChange={setTableStyles}
             />
-            <SaveLoadPanel 
-              tableData={tableData}
-              styles={tableStyles}
-              markdownInput={markdownInput}
-            />
-            <LoadGallery 
-              onLoadTable={handleLoadTable}
-              onLoadTheme={handleLoadTheme}
-            />
           </div>
 
           {/* Right Panel - Preview and Export */}
           <div className="lg:col-span-7 space-y-6">
-            <AISuggestions 
-              tableData={tableData}
-              markdownInput={markdownInput}
-              onApplyStyles={setTableStyles}
-              currentStyles={tableStyles}
-            />
             <TablePreview 
               tableData={tableData}
               styles={tableStyles}
+              onMoveRow={moveRow}
+              onMoveColumn={moveColumn}
             />
             <ExportPanel tableData={tableData} />
           </div>

@@ -7,10 +7,42 @@ export async function exportTableAsPNG(
   filename: string = 'table'
 ): Promise<void> {
   try {
-    const dpi = settings.quality === 'high' ? 300 : settings.quality === 'medium' ? 150 : 72;
+    // Determine if we're exporting from the expanded dialog
+    const isExpanded = tableElement.closest('#expanded-table-preview') !== null;
+    
+    // Set DPI based on quality setting - higher for expanded view
+    const dpi = settings.quality === 'high' ? (isExpanded ? 300 : 240) : 
+                settings.quality === 'medium' ? (isExpanded ? 200 : 150) : 
+                (isExpanded ? 120 : 72);
+                
     const scale = dpi / 96; // 96 is default DPI
     
-    const canvas = await html2canvas(tableElement, {
+    // Create a clone of the table in memory for proper rendering
+    const tableClone = tableElement.cloneNode(true) as HTMLElement;
+    const containerDiv = document.createElement('div');
+    
+    // Set container styles for better rendering
+    containerDiv.style.position = 'absolute';
+    containerDiv.style.left = '-9999px';
+    containerDiv.style.top = '-9999px';
+    containerDiv.style.width = 'auto';
+    containerDiv.style.height = 'auto';
+    containerDiv.style.padding = '20px';
+    containerDiv.style.backgroundColor = settings.background === 'transparent' ? 'transparent' : 
+                                         settings.background === 'white' ? '#FFFFFF' : 
+                                         settings.customBackground || '#FFFFFF';
+    
+    // Ensure table has width: auto to capture full size
+    const tableElementStyle = (tableClone as HTMLElement).style;
+    tableElementStyle.width = 'auto';
+    tableElementStyle.maxWidth = 'none';
+    
+    // Add to DOM temporarily
+    containerDiv.appendChild(tableClone);
+    document.body.appendChild(containerDiv);
+    
+    // Capture the image
+    const canvas = await html2canvas(containerDiv, {
       backgroundColor: settings.background === 'transparent' ? null : 
                       settings.background === 'white' ? '#FFFFFF' : 
                       settings.customBackground || '#FFFFFF',
@@ -19,6 +51,9 @@ export async function exportTableAsPNG(
       allowTaint: true,
       logging: false,
     });
+    
+    // Clean up
+    document.body.removeChild(containerDiv);
     
     // Create download link
     const link = document.createElement('a');
@@ -35,13 +70,44 @@ export async function exportTableAsPNG(
 
 export async function copyTableAsImage(tableElement: HTMLElement): Promise<void> {
   try {
-    const canvas = await html2canvas(tableElement, {
+    // Determine if we're exporting from the expanded dialog
+    const isExpanded = tableElement.closest('#expanded-table-preview') !== null;
+    
+    // Higher scale for better quality
+    const scale = isExpanded ? 3 : 2;
+    
+    // Create a clone of the table in memory for proper rendering
+    const tableClone = tableElement.cloneNode(true) as HTMLElement;
+    const containerDiv = document.createElement('div');
+    
+    // Set container styles for better rendering
+    containerDiv.style.position = 'absolute';
+    containerDiv.style.left = '-9999px';
+    containerDiv.style.top = '-9999px';
+    containerDiv.style.width = 'auto';
+    containerDiv.style.height = 'auto';
+    containerDiv.style.padding = '20px';
+    containerDiv.style.backgroundColor = '#FFFFFF';
+    
+    // Ensure table has width: auto to capture full size
+    const tableElementStyle = (tableClone as HTMLElement).style;
+    tableElementStyle.width = 'auto';
+    tableElementStyle.maxWidth = 'none';
+    
+    // Add to DOM temporarily
+    containerDiv.appendChild(tableClone);
+    document.body.appendChild(containerDiv);
+    
+    const canvas = await html2canvas(containerDiv, {
       backgroundColor: '#FFFFFF',
-      scale: 2,
+      scale: scale,
       useCORS: true,
       allowTaint: true,
       logging: false,
     });
+    
+    // Clean up
+    document.body.removeChild(containerDiv);
     
     canvas.toBlob(async (blob) => {
       if (blob && navigator.clipboard && navigator.clipboard.write) {
@@ -98,17 +164,7 @@ export function exportTableAsCSV(tableData: TableData): void {
   document.body.removeChild(link);
 }
 
-export function generateEmbedCode(tableElement: HTMLElement): void {
-  const embedCode = `<div style="overflow-x: auto;">
-${tableElement.outerHTML}
-</div>
 
-<style>
-${getComputedCSS(tableElement)}
-</style>`;
-  
-  copyToClipboard(embedCode);
-}
 
 function getComputedCSS(element: HTMLElement): string {
   const styles = window.getComputedStyle(element);

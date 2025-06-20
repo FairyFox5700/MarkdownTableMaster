@@ -1,7 +1,4 @@
 import { 
-  users, 
-  savedTables, 
-  customThemes,
   type User, 
   type InsertUser,
   type SavedTable,
@@ -10,7 +7,7 @@ import {
   type InsertCustomTheme
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { executeSupabaseQuery, checkRecordOwnership } from "./db-helper";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -33,91 +30,165 @@ export interface IStorage {
   deleteCustomTheme(id: number, userId: number): Promise<boolean>;
 }
 
-export class DatabaseStorage implements IStorage {
+export class SupabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    try {
+      const data = await db.users.findById(id);
+      return data as User || undefined;
+    } catch (error) {
+      console.error("Error getting user:", error);
+      return undefined;
+    }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    try {
+      const data = await db.users.findByUsername(username);
+      return data as User || undefined;
+    } catch (error) {
+      console.error("Error getting user by username:", error);
+      return undefined;
+    }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
+    try {
+      const data = await db.users.create(insertUser);
+      return data as User;
+    } catch (error) {
+      console.error("Error creating user:", error);
+      throw error;
+    }
   }
-
-  // Saved tables methods
+  
   async getSavedTable(id: number): Promise<SavedTable | undefined> {
-    const [table] = await db.select().from(savedTables).where(eq(savedTables.id, id));
-    return table || undefined;
+    try {
+      const data = await db.savedTables.findById(id);
+      return data as SavedTable || undefined;
+    } catch (error) {
+      console.error("Error getting saved table:", error);
+      return undefined;
+    }
   }
-
+  
   async getUserSavedTables(userId: number): Promise<SavedTable[]> {
-    return await db.select().from(savedTables).where(eq(savedTables.userId, userId));
+    try {
+      const data = await db.savedTables.findAll(userId);
+      return data as SavedTable[];
+    } catch (error) {
+      console.error("Error getting user saved tables:", error);
+      return [];
+    }
   }
-
+  
   async getPublicSavedTables(): Promise<SavedTable[]> {
-    return await db.select().from(savedTables).where(eq(savedTables.isPublic, true));
+    try {
+      const data = await executeSupabaseQuery<SavedTable[]>(
+        db.supabase.from('saved_tables').select('*').eq('is_public', true)
+      );
+      
+      return data;
+    } catch (error) {
+      console.error("Error getting public saved tables:", error);
+      return [];
+    }
   }
-
+  
   async createSavedTable(table: InsertSavedTable): Promise<SavedTable> {
-    const [savedTable] = await db
-      .insert(savedTables)
-      .values(table)
-      .returning();
-    return savedTable;
+    try {
+      const data = await db.savedTables.create(table);
+      return data as SavedTable;
+    } catch (error) {
+      console.error("Error creating saved table:", error);
+      throw error;
+    }
   }
-
+  
   async updateSavedTable(id: number, userId: number, updates: Partial<InsertSavedTable>): Promise<SavedTable | undefined> {
-    const [updatedTable] = await db
-      .update(savedTables)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(and(eq(savedTables.id, id), eq(savedTables.userId, userId)))
-      .returning();
-    return updatedTable || undefined;
+    try {
+      // First check that the table belongs to the user
+      const hasAccess = await checkRecordOwnership('saved_tables', id, userId, db.supabase);
+      if (!hasAccess) return undefined;
+      
+      const data = await db.savedTables.update(id, updates);
+      return data as SavedTable;
+    } catch (error) {
+      console.error("Error updating saved table:", error);
+      return undefined;
+    }
   }
-
+  
   async deleteSavedTable(id: number, userId: number): Promise<boolean> {
-    const result = await db
-      .delete(savedTables)
-      .where(and(eq(savedTables.id, id), eq(savedTables.userId, userId)));
-    return (result.rowCount ?? 0) > 0;
+    try {
+      // First check that the table belongs to the user
+      const hasAccess = await checkRecordOwnership('saved_tables', id, userId, db.supabase);
+      if (!hasAccess) return false;
+      
+      await db.savedTables.delete(id);
+      return true;
+    } catch (error) {
+      console.error("Error deleting saved table:", error);
+      return false;
+    }
   }
-
-  // Custom themes methods
+  
   async getCustomTheme(id: number): Promise<CustomTheme | undefined> {
-    const [theme] = await db.select().from(customThemes).where(eq(customThemes.id, id));
-    return theme || undefined;
+    try {
+      const data = await executeSupabaseQuery<CustomTheme>(
+        db.supabase.from('custom_themes').select('*').eq('id', id).single()
+      );
+      return data;
+    } catch (error) {
+      console.error("Error getting custom theme:", error);
+      return undefined;
+    }
   }
-
+  
   async getUserCustomThemes(userId: number): Promise<CustomTheme[]> {
-    return await db.select().from(customThemes).where(eq(customThemes.userId, userId));
+    try {
+      const data = await db.customThemes.findAll(userId);
+      return data as CustomTheme[];
+    } catch (error) {
+      console.error("Error getting user custom themes:", error);
+      return [];
+    }
   }
-
+  
   async getPublicCustomThemes(): Promise<CustomTheme[]> {
-    return await db.select().from(customThemes).where(eq(customThemes.isPublic, true));
+    try {
+      const data = await executeSupabaseQuery<CustomTheme[]>(
+        db.supabase.from('custom_themes').select('*').eq('is_public', true)
+      );
+      return data;
+    } catch (error) {
+      console.error("Error getting public custom themes:", error);
+      return [];
+    }
   }
-
+  
   async createCustomTheme(theme: InsertCustomTheme): Promise<CustomTheme> {
-    const [customTheme] = await db
-      .insert(customThemes)
-      .values(theme)
-      .returning();
-    return customTheme;
+    try {
+      const data = await db.customThemes.create(theme);
+      return data as CustomTheme;
+    } catch (error) {
+      console.error("Error creating custom theme:", error);
+      throw error;
+    }
   }
-
+  
   async deleteCustomTheme(id: number, userId: number): Promise<boolean> {
-    const result = await db
-      .delete(customThemes)
-      .where(and(eq(customThemes.id, id), eq(customThemes.userId, userId)));
-    return (result.rowCount ?? 0) > 0;
+    try {
+      // First check that the theme belongs to the user
+      const hasAccess = await checkRecordOwnership('custom_themes', id, userId, db.supabase);
+      if (!hasAccess) return false;
+      
+      await db.customThemes.delete(id);
+      return true;
+    } catch (error) {
+      console.error("Error deleting custom theme:", error);
+      return false;
+    }
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage: IStorage = new SupabaseStorage();
