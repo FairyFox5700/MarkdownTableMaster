@@ -21,6 +21,9 @@ export async function exportTableAsPNG(
     const tableClone = tableElement.cloneNode(true) as HTMLElement;
     const containerDiv = document.createElement('div');
     
+    // Hide drag and drop elements in the cloned table
+    hideDragElements(tableClone);
+    
     // Set container styles for better rendering
     containerDiv.style.position = 'absolute';
     containerDiv.style.left = '-9999px';
@@ -80,6 +83,9 @@ export async function copyTableAsImage(tableElement: HTMLElement): Promise<void>
     const tableClone = tableElement.cloneNode(true) as HTMLElement;
     const containerDiv = document.createElement('div');
     
+    // Hide drag and drop elements in the cloned table
+    hideDragElements(tableClone);
+    
     // Set container styles for better rendering
     containerDiv.style.position = 'absolute';
     containerDiv.style.left = '-9999px';
@@ -130,6 +136,12 @@ export async function copyTableAsImage(tableElement: HTMLElement): Promise<void>
 }
 
 export function exportTableAsHTML(tableElement: HTMLElement): void {
+  // Clone the table to avoid modifying the original
+  const tableClone = tableElement.cloneNode(true) as HTMLElement;
+  
+  // Hide drag and drop elements in the cloned table
+  hideDragElements(tableClone);
+  
   const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -142,7 +154,7 @@ export function exportTableAsHTML(tableElement: HTMLElement): void {
     </style>
 </head>
 <body>
-    ${tableElement.outerHTML}
+    ${tableClone.outerHTML}
 </body>
 </html>`;
   
@@ -162,6 +174,24 @@ export function exportTableAsCSV(tableData: TableData): void {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+/**
+ * Helper function to hide drag and drop elements in a table clone
+ * This is used across all export functions
+ */
+function hideDragElements(tableClone: HTMLElement): void {
+  // Hide all drag handles
+  const dragHandles = tableClone.querySelectorAll('[data-drag-handle]');
+  dragHandles.forEach((handle) => {
+    (handle as HTMLElement).style.display = 'none';
+  });
+  
+  // Hide first column which contains drag handles (both header and data cells)
+  const firstCells = tableClone.querySelectorAll('tr > td:first-child, tr > th:first-child');
+  firstCells.forEach((cell) => {
+    (cell as HTMLElement).style.display = 'none';
+  });
 }
 
 

@@ -5,6 +5,7 @@ import { MarkdownInput } from '@/components/markdown-input';
 import { StyleControls } from '@/components/style-controls';
 import { TablePreview } from '@/components/table-preview';
 import { ExportPanel } from '@/components/export-panel';
+import { DemoDialog } from '@/components/demo-dialog';
 import { parseMarkdownTable, generateSampleMarkdown } from '@/lib/markdown-parser';
 import { DEFAULT_STYLES } from '@/types/table-styles';
 import type { TableStyles, TableData } from '@/types/table-styles';
@@ -13,6 +14,7 @@ export default function Home() {
   const [markdownInput, setMarkdownInput] = useState('');
   const [tableStyles, setTableStyles] = useState<TableStyles>(DEFAULT_STYLES);
   const [tableData, setTableData] = useState<TableData | null>(null);
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
 
   // Parse markdown whenever input changes
   useEffect(() => {
@@ -114,8 +116,14 @@ export default function Home() {
               </span>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setIsDemoOpen(true)}
+              >
                 <HelpCircle className="w-4 h-4" />
+                <span className="ml-2 hidden sm:inline">How to Use</span>
               </Button>
               <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
                 <Settings className="w-4 h-4" />
@@ -152,6 +160,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+      
+      {/* Demo Dialog */}
+      <DemoDialog 
+        open={isDemoOpen} 
+        onOpenChange={setIsDemoOpen} 
+      />
     </div>
   );
 }
